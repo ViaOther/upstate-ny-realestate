@@ -173,18 +173,70 @@ with tab1:
         st.write(f"**Tier B Renovation Runway Progress:** ${uw['retained_capital']:,.0f} retained of $200,000 target for guest studio/landscaping.")
         st.progress(uw["progress_ratio"])
 
-    # DSCR Gauge & Cash Flow Panel
-    st.markdown("#### 📊 DSCR & Monthly Debt Service Metrics")
-    dscr_col1, dscr_col2, dscr_col3, dscr_col4 = st.columns(4)
-    with dscr_col1:
-        status_symbol = "✅ PASS" if uw["dscr_pass"] else "❌ FAIL"
-        st.metric("DSCR Ratio", f"{uw['dscr_ratio']:.2f}x", status_symbol)
-    with dscr_col2:
-        st.metric("Monthly PITI Debt", f"${uw['monthly_piti']:,.0f}")
-    with dscr_col3:
-        st.metric("Monthly Gross STR Rev", f"${uw['monthly_gross_revenue']:,.0f}")
-    with dscr_col4:
-        st.metric("Net Cash-on-Cash ROI", f"{uw['cash_on_cash_roi']:.1f}%")
+    # Executive Investment Summary Note-Card
+    st.markdown("---")
+    st.markdown("### 📝 Executive Investment Summary Note-Card")
+
+    if uw["dscr_pass"] and "Tier B" in uw["tier_level"]:
+        verdict_title = "🟢 HIGH-POTENTIAL VALUE-ADD CANVAS"
+        verdict_color = "#2E7D32"
+        verdict_bg = "#E8F5E9"
+        verdict_border = "#81C784"
+    elif uw["dscr_pass"] and "Tier A" in uw["tier_level"]:
+        verdict_title = "🔵 LUXURY TURNKEY INVESTMENT ESTATE"
+        verdict_color = "#1565C0"
+        verdict_bg = "#E3F2FD"
+        verdict_border = "#64B5F6"
+    elif not uw["dscr_pass"]:
+        verdict_title = "🔴 UNDERWRITING CAUTION: DSCR BELOW 1.20x"
+        verdict_color = "#C62828"
+        verdict_bg = "#FFEBEE"
+        verdict_border = "#EF9A9A"
+    else:
+        verdict_title = "🟠 STANDARD STRATEGIC ACQUISITION"
+        verdict_color = "#EF6C00"
+        verdict_bg = "#FFF3E0"
+        verdict_border = "#FFB74D"
+
+    note_card_html = f"""
+    <div style="background-color: {verdict_bg}; border: 2px solid {verdict_border}; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; color: #1A1A1A;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid {verdict_border}; padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: {verdict_color}; font-size: 1.3rem;">{verdict_title}</h3>
+            <span style="font-weight: bold; background: white; padding: 4px 12px; border-radius: 20px; border: 1px solid {verdict_border}; color: #333;">{address}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px;">
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #E0E0E0;">
+                <strong style="color: #555;">💰 Capital Required:</strong><br>
+                <span style="font-size: 1.2rem; font-weight: bold; color: #1A1A1A;">${uw['total_outlay']:,.0f}</span>
+                <span style="font-size: 0.85rem; color: #666;"><br>({uw['down_payment_pct']:.0f}% Down + 3% Closing)</span>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #E0E0E0;">
+                <strong style="color: #555;">🛡️ Retained Capital Runway:</strong><br>
+                <span style="font-size: 1.2rem; font-weight: bold; color: {verdict_color};">${uw['retained_capital']:,.0f}</span>
+                <span style="font-size: 0.85rem; color: #666;"><br>(Available for Studio & Pool)</span>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #E0E0E0;">
+                <strong style="color: #555;">📈 Debt Coverage (DSCR):</strong><br>
+                <span style="font-size: 1.2rem; font-weight: bold; color: {'#2E7D32' if uw['dscr_pass'] else '#C62828'};">{uw['dscr_ratio']:.2f}x</span>
+                <span style="font-size: 0.85rem; color: #666;"><br>({'PASSES >= 1.20x' if uw['dscr_pass'] else 'NEEDS HIGHER ADR/OCC'})</span>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #E0E0E0;">
+                <strong style="color: #555;">🌙 Target STR Performance:</strong><br>
+                <span style="font-size: 1.2rem; font-weight: bold; color: #1A1A1A;">${projected_adr:.0f}/night</span>
+                <span style="font-size: 0.85rem; color: #666;"><br>at {projected_occ:.0f}% Occupancy (${uw['monthly_gross_revenue']:,.0f}/mo)</span>
+            </div>
+        </div>
+        <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid {verdict_color};">
+            <h4 style="margin: 0 0 8px 0; color: #333;">💡 Strategic Takeaways & Action Plan:</h4>
+            <ul style="margin: 0; padding-left: 20px; font-size: 0.95rem; line-height: 1.5; color: #333;">
+                <li><strong>Development Strategy:</strong> {'Retains $' + f"{uw['retained_capital']:,.0f}" + ' capital runway. Target a detached guest studio (no kitchen) under a single STR permit.' if 'Tier B' in uw['tier_level'] else 'Turnkey property requiring zero major capital outlays.'}</li>
+                <li><strong>Zoning & Septic Audit:</strong> Property sits in <strong>{compliance['town']}</strong> ({compliance['str_risk']}). Lot size is <strong>{lot_acres:.2f} Acres</strong> ({'Meets 2.0+ Acre Rule' if lot_acres >= compliance['min_lot_acres'] else 'Below District Min'}). Maintain 20-ft septic isolation for any pool/hot tub build.</li>
+                <li><strong>Operating Requirement:</strong> Must assign a local contact/property manager within {compliance['local_manager_rule']}.</li>
+            </ul>
+        </div>
+    </div>
+    """
+    st.markdown(note_card_html, unsafe_allow_html=True)
 
     # Town & Zoning Compliance Output
     st.markdown("---")
@@ -265,7 +317,6 @@ with tab2:
     else:
         df_vault = pd.DataFrame(properties)
 
-        # Controls & Filters
         f_col1, f_col2, f_col3 = st.columns(3)
         with f_col1:
             status_filter = st.multiselect("Filter by Status:", options=list(df_vault["status"].unique()), default=list(df_vault["status"].unique()))
@@ -274,7 +325,6 @@ with tab2:
         with f_col3:
             rating_filter = st.slider("Filter Min Rating (Stars):", 1, 5, 1)
 
-        # Apply Filters
         filtered_df = df_vault[
             (df_vault["status"].isin(status_filter)) &
             (df_vault["dscr_ratio"] >= min_dscr) &
@@ -283,11 +333,9 @@ with tab2:
 
         st.markdown(f"**Showing {len(filtered_df)} of {len(df_vault)} Archived Properties**")
 
-        # Table Display
         display_cols = ["address", "price", "tier_level", "dscr_ratio", "retained_capital", "town", "rating", "status", "added_by"]
         st.dataframe(filtered_df[display_cols], use_container_width=True)
 
-        # Property Card Deletions & Notes
         st.markdown("---")
         st.subheader("Manage Saved Properties")
         selected_addr = st.selectbox("Select Property to Manage:", options=filtered_df["address"].tolist())
