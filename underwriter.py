@@ -234,7 +234,6 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
         "raw_url": user_input if user_input.startswith("http") else ""
     }
 
-    # Extract price from text ($XXX,XXX or $XXXXXX)
     price_match = re.search(r'\$(\d{1,3}(?:,\d{3})+|\d+)', user_input)
     if price_match:
         try:
@@ -242,12 +241,10 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
         except:
             pass
 
-    # Extract ZIP Code
     zip_match = re.search(r'\b(1\d{4})\b', user_input)
     if zip_match:
         result["zip_code"] = zip_match.group(1)
 
-    # Extract Beds/Baths
     beds_match = re.search(r'(\d+)\s*(?:bed|bd|br)', user_input, re.IGNORECASE)
     if beds_match:
         result["beds"] = int(beds_match.group(1))
@@ -256,20 +253,17 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
     if baths_match:
         result["baths"] = float(baths_match.group(1))
 
-    # Extract Lot Size (Acres)
     acres_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:acre|ac)', user_input, re.IGNORECASE)
     if acres_match:
         result["lot_size_acres"] = float(acres_match.group(1))
 
     # Parse Address & Price from URL or OpenGraph metadata
     if "zillow.com" in user_input or "redfin.com" in user_input:
-        # Try metadata fetch
         try:
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
             resp = requests.get(user_input, headers=headers, timeout=3)
             if resp.status_code == 200:
                 html = resp.text
-                # Look for price in og:description or title tag
                 meta_price = re.search(r'\$(\d{1,3}(?:,\d{3})+|\d+)', html)
                 if meta_price:
                     result["price"] = float(meta_price.group(1).replace(",", ""))
