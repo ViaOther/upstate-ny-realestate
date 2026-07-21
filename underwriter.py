@@ -92,34 +92,27 @@ TOWN_REGULATIONS = {
 }
 
 def evaluate_tier_and_capital(price: float, down_payment_override: Optional[float] = None, cash_reserves_pool: float = DEFAULT_CASH_RESERVES) -> Dict[str, Any]:
-    """
-    Evaluates the Tier A vs. Tier B Rules & Capital Runway:
-    - Tier A ($750k - $1M): Capped at flat 20% down payment ($150k - $200k). Blue badge.
-    - Tier B ($400k - $600k): Active value-add acquisition matrix. Green badge.
-    - Mid-Tier ($600k - $750k) or Custom.
-    """
     if price >= 750000:
         tier_level = "Tier A: Luxury Turnkey"
-        down_payment_pct = 20.0  # Flat 20% cap for Tier A
+        down_payment_pct = 20.0
         tier_badge = "Tier A: Luxury Turnkey Rule. Action Required: Confirm property requires zero structural renovations, pool builds, or amenity installations."
-        tier_color = "#1E88E5"  # Blue
+        tier_color = "#1E88E5"
     elif price <= 600000 and price >= 350000:
         tier_level = "Tier B: Value-Add Canvas"
         down_payment_pct = down_payment_override if down_payment_override is not None else 20.0
         tier_badge = "Tier B: Value-Add Canvas. Action Required: Run full lot footprint and septic verification to support up to $200,000 in capital renovations."
-        tier_color = "#2E7D32"  # Vibrant Green
+        tier_color = "#2E7D32"
     else:
         tier_level = "Mid-Tier / Standard Acquisition"
         down_payment_pct = down_payment_override if down_payment_override is not None else 20.0
         tier_badge = "Standard Strategic Acquisition: Evaluate balance between turnkey condition and amenity additions."
-        tier_color = "#FB8C00"  # Orange
+        tier_color = "#FB8C00"
 
     down_payment_amt = price * (down_payment_pct / 100.0)
     closing_costs = price * (CLOSING_COST_PCT / 100.0)
     total_outlay = down_payment_amt + closing_costs
     retained_capital = max(0.0, cash_reserves_pool - total_outlay)
 
-    # Progress bar ratio for Tier B towards $200,000 renovation target
     renovation_target = 200000.0
     progress_ratio = min(1.0, max(0.0, retained_capital / renovation_target))
 
@@ -146,40 +139,33 @@ def calculate_dscr_underwriting(
     cash_reserves_pool: float = DEFAULT_CASH_RESERVES,
     broker_contact: str = "Unknown Broker"
 ) -> Dict[str, Any]:
-    """Calculates full DSCR debt service, PITI, NOI, and cash flow metrics."""
     tier_info = evaluate_tier_and_capital(price, down_payment_pct_override, cash_reserves_pool)
 
     down_pct = tier_info["down_payment_pct"]
     down_amt = tier_info["down_payment_amt"]
     loan_amount = price - down_amt
 
-    # Monthly Principal & Interest (P&I) formula
     r = (interest_rate / 100.0) / 12.0
-    n = 360  # 30-year fixed
+    n = 360
     if r > 0 and loan_amount > 0:
         monthly_pi = loan_amount * (r * (1 + r)**n) / ((1 + r)**n - 1)
     else:
         monthly_pi = 0.0
 
-    # Approx Property Taxes (2% annual) & Home Insurance (0.6% annual)
     monthly_taxes = (price * 0.02) / 12.0
     monthly_insurance = (price * 0.006) / 12.0
     monthly_piti = monthly_pi + monthly_taxes + monthly_insurance
 
-    # Monthly Gross STR Revenue: (ADR * Days * Occ%)
     days_in_month = 30.416
     monthly_gross_revenue = projected_adr * (projected_occ_pct / 100.0) * days_in_month
     annual_gross_revenue = monthly_gross_revenue * 12.0
 
-    # Operating Expenses & NOI
     monthly_opex = monthly_gross_revenue * (opex_ratio / 100.0)
     monthly_noi = monthly_gross_revenue - monthly_opex
 
-    # DSCR Ratio: Gross Revenue / Monthly PITI
     dscr_ratio = monthly_gross_revenue / monthly_piti if monthly_piti > 0 else 0.0
     dscr_pass = dscr_ratio >= 1.20
 
-    # Net Cash Flow & Cash-on-Cash Return
     monthly_net_cash_flow = monthly_noi - monthly_piti
     annual_net_cash_flow = monthly_net_cash_flow * 12.0
     cash_on_cash_roi = (annual_net_cash_flow / tier_info["total_outlay"]) * 100.0 if tier_info["total_outlay"] > 0 else 0.0
@@ -217,7 +203,6 @@ def calculate_dscr_underwriting(
     }
 
 def lookup_town_compliance(zip_code: str) -> Dict[str, Any]:
-    """Looks up municipal zoning and STR compliance rules by ZIP code."""
     zip_clean = str(zip_code).strip()
     if zip_clean in TOWN_REGULATIONS:
         return TOWN_REGULATIONS[zip_clean]
@@ -237,10 +222,6 @@ def lookup_town_compliance(zip_code: str) -> Dict[str, Any]:
         }
 
 def parse_listing_input(user_input: str) -> Dict[str, Any]:
-    """
-    Parses listing URLs or manual text input to extract address, price, zip, beds, baths, lot size.
-    Falls back gracefully if network fails or input is unstructured.
-    """
     result = {
         "address": "",
         "zip_code": "12446",
@@ -252,7 +233,6 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
         "raw_url": user_input if user_input.startswith("http") else ""
     }
 
-    # Extract price ($XXX,XXX)
     price_match = re.search(r'\$(\d{1,3}(?:,\d{3})+|\d+)', user_input)
     if price_match:
         try:
@@ -260,12 +240,10 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
         except:
             pass
 
-    # Extract ZIP Code (5 digits starting with 1)
     zip_match = re.search(r'\b(1\d{4})\b', user_input)
     if zip_match:
         result["zip_code"] = zip_match.group(1)
 
-    # Extract Beds/Baths
     beds_match = re.search(r'(\d+)\s*(?:bed|bd|br)', user_input, re.IGNORECASE)
     if beds_match:
         result["beds"] = int(beds_match.group(1))
@@ -274,22 +252,31 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
     if baths_match:
         result["baths"] = float(baths_match.group(1))
 
-    # Extract Lot Size (Acres)
     acres_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:acre|ac)', user_input, re.IGNORECASE)
     if acres_match:
         result["lot_size_acres"] = float(acres_match.group(1))
 
-    # Parse Address if URL
-    if "redfin.com" in user_input or "zillow.com" in user_input:
+    # Parse Address from Zillow or Redfin URLs
+    if "zillow.com" in user_input or "redfin.com" in user_input:
         parsed_url = urllib.parse.urlparse(user_input)
-        path_parts = [p for p in parsed_url.path.split('/') if p]
-        if path_parts:
-            # Reconstruct address from slug
-            slug = path_parts[-1] if not path_parts[-1].startswith("home") else (path_parts[-2] if len(path_parts) > 1 else path_parts[-1])
-            address_slug = slug.replace("-", " ")
-            result["address"] = address_slug.title()
+        path_parts = [p for p in parsed_url.path.split('/') if p and p != '']
+        address_found = False
 
-    if not result["address"]:
-        result["address"] = f"Listing near ZIP {result['zip_code']}"
+        for part in path_parts:
+            if re.search(r'\d+', part) and not part.endswith('_zpid') and part != 'home':
+                cleaned = part.replace("-", " ").strip()
+                if len(cleaned) > 5:
+                    result["address"] = cleaned.title()
+                    address_found = True
+                    break
+
+        if not address_found and len(path_parts) > 1:
+            for part in reversed(path_parts):
+                if not part.endswith('_zpid') and part != 'home' and len(part) > 3:
+                    result["address"] = part.replace("-", " ").title()
+                    break
+
+    if not result["address"] or result["address"].endswith("Zpid"):
+        result["address"] = f"Property near ZIP {result['zip_code']}"
 
     return result
