@@ -245,19 +245,22 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
     if zip_match:
         result["zip_code"] = zip_match.group(1)
 
-    beds_match = re.search(r'(\d+)\s*(?:bed|bd|br)', user_input, re.IGNORECASE)
+    beds_match = re.search(r'(\d+)\s*(?:bed|bd|br|bds|bedrooms)', user_input, re.IGNORECASE)
     if beds_match:
         result["beds"] = int(beds_match.group(1))
 
-    baths_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:bath|ba)', user_input, re.IGNORECASE)
+    baths_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:bath|ba|bths|baths|bathrooms)', user_input, re.IGNORECASE)
     if baths_match:
         result["baths"] = float(baths_match.group(1))
 
-    acres_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:acre|ac)', user_input, re.IGNORECASE)
+    acres_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:acre|ac|acres)', user_input, re.IGNORECASE)
     if acres_match:
         result["lot_size_acres"] = float(acres_match.group(1))
 
-    # Parse Address & Price from URL or OpenGraph metadata
+    phone_match = re.search(r'\b(\d{3}[-.\s]\d{3}[-.\s]\d{4})\b', user_input)
+    if phone_match:
+        result["broker_contact"] = f"Listing Broker (Click-to-Call: {phone_match.group(1)})"
+
     if "zillow.com" in user_input or "redfin.com" in user_input:
         try:
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
@@ -267,6 +270,18 @@ def parse_listing_input(user_input: str) -> Dict[str, Any]:
                 meta_price = re.search(r'\$(\d{1,3}(?:,\d{3})+|\d+)', html)
                 if meta_price:
                     result["price"] = float(meta_price.group(1).replace(",", ""))
+
+                meta_acres = re.search(r'(\d+(?:\.\d+)?)\s*(?:acre|ac|acres)', html, re.I)
+                if meta_acres:
+                    result["lot_size_acres"] = float(meta_acres.group(1))
+
+                meta_beds = re.search(r'(\d+)\s*(?:bed|bd|br|bds)', html, re.I)
+                if meta_beds:
+                    result["beds"] = int(meta_beds.group(1))
+
+                meta_baths = re.search(r'(\d+(?:\.\d+)?)\s*(?:bath|ba|baths)', html, re.I)
+                if meta_baths:
+                    result["baths"] = float(meta_baths.group(1))
         except:
             pass
 
