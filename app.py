@@ -213,7 +213,7 @@ with tab1:
     st.subheader("5. Archive Property to Shared Vault")
     save_col1, save_col2, save_col3 = st.columns([1, 1, 1])
     with save_col1:
-        added_by = st.selectbox("Property Evaluated By:", ["Husband", "Wife"])
+        added_by = st.selectbox("Property Evaluated By:", ["Andrew", "Gab"])
     with save_col2:
         rating = st.slider("Property Rating (1 to 5 Stars):", 1, 5, 4)
     with save_col3:
